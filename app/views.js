@@ -70,7 +70,6 @@ function addTransactionForm() {
       <label>Amount ($) <input type="number" name="amount" min="0.01" step="0.01" placeholder="0.00" required></label>
       <button type="submit" class="button">Add to the ledger</button>
     </div>
-    <p class="hint">Every total, bar and chart moves with it.</p>
   </form>`;
 }
 
@@ -91,8 +90,8 @@ export function dashboardView() {
   const envelopes = store.state.categories
     .filter((c) => c.kind !== 'savings')
     .map((c) => ({ c, spent: byCategory[c.id] }))
-    .sort((a, b) => percent(b.spent, b.c.limit) - percent(a.spent, a.c.limit))
-    .slice(0, 6);
+    .sort((a, b) => a.c.limit - a.spent - (b.c.limit - b.spent))
+    .slice(0, 4);
   const near = store.state.categories.filter((c) => c.kind !== 'savings' && c.limit - byCategory[c.id] <= 25).length;
   const envelopeCount = store.state.categories.filter((c) => c.kind !== 'savings').length;
 
@@ -162,10 +161,9 @@ export function dashboardView() {
   <div class="row">
     <article class="card">
       <header class="card-head">
-        <h2>Envelope watch</h2>
-        <a class="card-link" href="#/budget">All ${store.state.categories.length} &rarr;</a>
+        <h2>Envelopes closest to the limit <span class="chip">${near} of ${envelopeCount} within $25</span></h2>
+        <a class="card-link" href="#/budget">All envelopes &rarr;</a>
       </header>
-      <p class="card-note">${near} of ${envelopeCount} within $25 of the limit</p>
       <div class="env-grid">${envelopes.map((e) => envelopeRow(e.c, e.spent)).join('')}</div>
     </article>
   </div>`;
@@ -207,7 +205,6 @@ export function budgetView() {
       <label>Monthly limit ($) <input type="number" name="limit" min="0" step="1" placeholder="100" required></label>
       <button type="submit" class="button">Add to the budget</button>
     </div>
-    <p class="hint">It joins the grid and counts toward the month's plan.</p>
   </form>`;
 }
 
@@ -303,12 +300,12 @@ export function billsGoalsView() {
 export function reportsView() {
   const { income, spent } = store.totals();
   const byCategory = store.spentByCategory();
-  const day = Number(store.asOf().slice(8, 10));
   const donutSlices = store.state.categories
     .filter((c) => c.id !== 'housing' && c.kind !== 'savings' && byCategory[c.id] > 0)
     .map((c) => ({ label: c.name, value: byCategory[c.id], color: c.color }))
     .sort((a, b) => b.value - a.value);
   const everydayTotal = donutSlices.reduce((sum, s) => sum + s.value, 0);
+  const rent = byCategory.housing ?? 0;
   const biggest = donutSlices[0];
   const biggestTx = [...store.state.transactions]
     .filter((t) => t.type === 'expense' && t.category !== 'housing' && t.category !== 'savings')
@@ -321,9 +318,14 @@ export function reportsView() {
   return `${pageHead('Reports', 'Where November’s money went, and how it stacks up against the last five.')}
   <section class="row row-main">
     <article class="card">
-      <header class="card-head"><h2>November spending by category</h2><span class="chip">${money(everydayTotal)}</span></header>
-      <p class="card-note">Rent and savings set aside; this is what the household chooses.</p>
-      <canvas id="donut-chart" class="chart chart-donut" width="640" height="300" aria-label="Donut chart of spending by category"></canvas>
+      <header class="card-head"><h2>Everyday spending by category</h2></header>
+      <div class="recon">
+        <div><span class="micro">All out</span><b>${money(spent)}</b></div>
+        <div><span class="micro">Less rent</span><b>&minus;${money(rent)}</b></div>
+        <div><span class="micro">Less savings</span><b>&minus;${money(saved)}</b></div>
+        <div class="recon-sum"><span class="micro">Equals everyday</span><b>${money(everydayTotal)}</b></div>
+      </div>
+      <canvas id="donut-chart" class="chart chart-donut" width="640" height="300" aria-label="Donut chart of everyday spending by category"></canvas>
       <ul class="donut-legend">
         ${donutSlices.map((s) => `<li><i class="sw" style="background:${s.color}"></i>${escapeHtml(s.label)}<b>${money(s.value)}</b></li>`).join('')}
       </ul>

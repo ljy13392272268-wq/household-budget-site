@@ -1,12 +1,14 @@
 // Hearth Ledger — two drawings by hand on <canvas>: grouped bars for income
 // against spending, and a donut of the month's spending by category.
 
+import { money } from './store.js';
+
 const INK = '#22302a';
 const MUTED = '#6f6a5e';
 const LINE = '#e4ddcc';
 const GREEN = '#1e4d3a';
 const AMBER = '#c96f22';
-const SANS = '11px system-ui, -apple-system, "Segoe UI", sans-serif';
+const SANS = '11px system-ui, "Segoe UI", sans-serif';
 
 function setupCanvas(canvas) {
   const dpr = window.devicePixelRatio || 1;
@@ -96,7 +98,7 @@ export function drawDonut(canvas, slices, centerNote = 'spent in November') {
   ctx.font = 'bold 19px "Iowan Old Style", "Bitstream Charter", Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`$${Math.round(total).toLocaleString('en-US')}`, cx, cy - 11);
+  ctx.fillText(money(total), cx, cy - 11);
   ctx.fillStyle = MUTED;
   ctx.font = SANS;
   ctx.fillText(centerNote, cx, cy + 11);

@@ -6,8 +6,6 @@ const HOUSEHOLD = {
   members: ['Maya', 'Tom', 'Leo (9)', 'June (6)'],
   month: 'November 2026',
   monthKey: '2026-11',
-  payday: 'Fridays, every two weeks',
-  note: 'Take-home pay, after tax. Rent is due on the 1st; the savings transfer goes out on the 3rd.',
 };
 const CATEGORIES = [
   { id: 'housing', name: 'Housing', limit: 1850, kind: 'needs', color: '#1e4d3a' },
