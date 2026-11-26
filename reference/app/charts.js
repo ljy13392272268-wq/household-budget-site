@@ -1,9 +1,12 @@
-// Hearth Ledger — charts, drawn by hand on <canvas>.
-//
-// No chart library: two small drawings cover everything the site shows —
-// grouped bars for income against spending, and a donut for the month's
-// spending by category. Colours come from the categories in data.js, so a
-// category keeps its colour on every page.
+// Hearth Ledger — two drawings by hand on <canvas>: grouped bars for income
+// against spending, and a donut of the month's spending by category.
+
+const INK = '#22302a';
+const MUTED = '#6f6a5e';
+const LINE = '#e4ddcc';
+const GREEN = '#1e4d3a';
+const AMBER = '#c96f22';
+const SANS = '11px system-ui, -apple-system, "Segoe UI", sans-serif';
 
 function setupCanvas(canvas) {
   const dpr = window.devicePixelRatio || 1;
@@ -15,65 +18,58 @@ function setupCanvas(canvas) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return { ctx, width, height };
 }
-
-// Grouped bars: one pair per month, income in green, spending in amber.
 export function drawCashFlow(canvas, months) {
   const { ctx, width, height } = setupCanvas(canvas);
-  const pad = { top: 12, right: 8, bottom: 26, left: 46 };
+  const pad = { top: 14, right: 6, bottom: 24, left: 40 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
-  const max = Math.max(...months.flatMap((m) => [m.income, m.spent]), 1) * 1.08;
+  const peak = Math.max(...months.flatMap((m) => [m.income, m.spent]), 1);
+  const step = [500, 1000, 2000, 2500, 5000].find((s) => s * 4 >= peak) ?? 5000;
+  const max = step * 4;
 
-  ctx.font = '12px system-ui, sans-serif';
+  ctx.font = SANS;
   ctx.textBaseline = 'middle';
-
-  // Gridlines and the dollar scale.
-  ctx.strokeStyle = '#e3dccb';
-  ctx.fillStyle = '#6f6a5e';
   ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i += 1) {
-    const value = (max / 4) * i;
-    const y = pad.top + plotH - (plotH * value) / max;
+    const y = Math.round(pad.top + plotH - (plotH * step * i) / max) + 0.5;
+    ctx.strokeStyle = i === 0 ? '#cfc8b4' : LINE;
     ctx.beginPath();
     ctx.moveTo(pad.left, y);
     ctx.lineTo(width - pad.right, y);
     ctx.stroke();
+    ctx.fillStyle = MUTED;
     ctx.textAlign = 'right';
-    ctx.fillText(`$${Math.round(value / 1000)}k`, pad.left - 6, y);
+    ctx.fillText(step * i === 0 ? '$0' : `$${(step * i) / 1000}k`, pad.left - 7, y);
   }
 
   const groupW = plotW / months.length;
-  const barW = Math.min(26, (groupW - 24) / 2);
+  const barW = Math.min(28, Math.max(8, (groupW - 34) / 2));
   months.forEach((m, i) => {
-    const groupX = pad.left + groupW * i;
-    const incomeH = (plotH * m.income) / max;
-    const spentH = (plotH * m.spent) / max;
-    const center = groupX + groupW / 2;
-    ctx.fillStyle = '#1e4d3a';
-    ctx.fillRect(center - barW - 3, pad.top + plotH - incomeH, barW, incomeH);
-    ctx.fillStyle = '#d97b29';
-    ctx.fillRect(center + 3, pad.top + plotH - spentH, barW, spentH);
-    ctx.fillStyle = '#3d3a33';
+    const center = pad.left + groupW * i + groupW / 2;
+    const incomeH = Math.max(1, (plotH * m.income) / max);
+    const spentH = Math.max(1, (plotH * m.spent) / max);
+    ctx.fillStyle = GREEN;
+    ctx.fillRect(center - barW - 2, pad.top + plotH - incomeH, barW, incomeH);
+    ctx.fillStyle = AMBER;
+    ctx.fillRect(center + 2, pad.top + plotH - spentH, barW, spentH);
+    ctx.fillStyle = i === months.length - 1 ? INK : MUTED;
+    ctx.font = i === months.length - 1 ? `bold ${SANS}` : SANS;
     ctx.textAlign = 'center';
-    ctx.fillText(m.month, center, height - 8);
+    ctx.fillText(m.month, center, height - 7);
   });
 }
-
-// A donut of the month's spending, one slice per category, with a legend
-// drawn beside it as HTML by the caller (the canvas carries the slices).
-// `centerNote` is the small line under the total in the hole.
 export function drawDonut(canvas, slices, centerNote = 'spent in November') {
   const { ctx, width, height } = setupCanvas(canvas);
   const total = slices.reduce((sum, s) => sum + s.value, 0);
   const cx = width / 2;
   const cy = height / 2;
-  const outer = Math.min(width, height) / 2 - 6;
-  const inner = outer * 0.58;
+  const outer = Math.min(width, height) / 2 - 8;
+  const inner = outer * 0.56;
 
   ctx.clearRect(0, 0, width, height);
   if (total <= 0) {
-    ctx.fillStyle = '#6f6a5e';
-    ctx.font = '14px system-ui, sans-serif';
+    ctx.fillStyle = MUTED;
+    ctx.font = SANS;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('Nothing spent yet', cx, cy);
@@ -91,19 +87,17 @@ export function drawDonut(canvas, slices, centerNote = 'spent in November') {
     ctx.fill();
     start += sweep;
   }
-
-  // Punch the hole, then write the total in it.
   ctx.globalCompositeOperation = 'destination-out';
   ctx.beginPath();
   ctx.arc(cx, cy, inner, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = '#22302a';
-  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillStyle = INK;
+  ctx.font = 'bold 19px "Iowan Old Style", "Bitstream Charter", Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`$${Math.round(total).toLocaleString('en-US')}`, cx, cy - 12);
-  ctx.fillStyle = '#6f6a5e';
-  ctx.font = '12px system-ui, sans-serif';
-  ctx.fillText(centerNote, cx, cy + 12);
+  ctx.fillText(`$${Math.round(total).toLocaleString('en-US')}`, cx, cy - 11);
+  ctx.fillStyle = MUTED;
+  ctx.font = SANS;
+  ctx.fillText(centerNote, cx, cy + 11);
 }

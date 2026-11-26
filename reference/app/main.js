@@ -1,14 +1,8 @@
-// Hearth Ledger — the router and the wiring.
-//
-// Hash routes, one per page; every link in the header is a hash route, so
-// each page is reached by a link and the back button works. After a page
-// renders, the charts are drawn and the forms and buttons are wired.
-// window.__shotReady is false while a page renders and true once it is on
-// screen, so a screenshot script knows when to capture.
+// Hearth Ledger — the router and the wiring: one hash route per page, the
+// charts drawn, and the buttons and forms connected.
 
 import { drawCashFlow, drawDonut } from './charts.js';
-import { money } from './store.js';
-import { store } from './store.js';
+import { money, store } from './store.js';
 import {
   billsGoalsView,
   budgetView,
@@ -42,7 +36,7 @@ function drawCharts() {
   if (donut) {
     const byCategory = store.spentByCategory();
     const slices = store.state.categories
-      .filter((c) => c.id !== 'housing' && c.id !== 'savings' && byCategory[c.id] > 0)
+      .filter((c) => c.id !== 'housing' && c.kind !== 'savings' && byCategory[c.id] > 0)
       .map((c) => ({ label: c.name, value: byCategory[c.id], color: c.color }))
       .sort((a, b) => b.value - a.value);
     drawDonut(donut, slices, 'everyday spending');
@@ -104,7 +98,7 @@ function wirePage() {
       const amount = Math.round(Number(data.get('amount')) * 100) / 100;
       if (!amount || amount <= 0) return;
       store.addTransaction({
-        date: String(data.get('date') || '2026-11-26'),
+        date: String(data.get('date') || store.asOf()),
         description: String(data.get('description') || '').trim() || 'Untitled',
         category: String(data.get('category') || ''),
         amount,
