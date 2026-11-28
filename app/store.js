@@ -1,111 +1,138 @@
 // Hearth Ledger — the Rivera household's book and the state around it: the
 // November seed, every change saved in localStorage, and the sums pages read.
+// The seed data is kept as compact rows and mapped to objects once, so the
+// first load stays small; twelve months of history, the household's debts
+// with a payoff simulator, and a six-month projection all live here too.
 
+// [id, name, limit, kind, color]
+const CATEGORIES = [
+  ['housing', 'Housing', 1850, 'needs', '#1e4d3a'],
+  ['groceries', 'Groceries', 750, 'needs', '#3e7d5b'],
+  ['utilities', 'Utilities', 320, 'needs', '#6aa88a'],
+  ['transport', 'Transport', 520, 'needs', '#2f6f8f'],
+  ['kids', 'Kids & school', 420, 'needs', '#5b8fb0'],
+  ['health', 'Health', 260, 'needs', '#7ba7bc'],
+  ['dining', 'Dining out', 300, 'wants', '#d97b29'],
+  ['fun', 'Fun & streaming', 200, 'wants', '#e8a13c'],
+  ['clothing', 'Clothing', 150, 'wants', '#c98a5e'],
+  ['household', 'Household', 180, 'wants', '#a9805a'],
+  ['gifts', 'Gifts & giving', 120, 'wants', '#b56a6a'],
+  ['savings', 'Savings', 1200, 'savings', '#8a6fb8'],
+];
+// [date, description, category (null for income), amount, type]
+const TRANSACTIONS = [
+  ['2026-11-01', 'November rent — Maple Court Apt 4B', 'housing', 1850.0, 'expense'],
+  ['2026-11-01', 'GreenMart weekly shop', 'groceries', 132.4, 'expense'],
+  ['2026-11-02', 'City power — October bill', 'utilities', 128.4, 'expense'],
+  ['2026-11-03', 'Transfer to emergency fund', 'savings', 1200.0, 'expense'],
+  ['2026-11-03', 'Corner Bakery — school lunch boxes', 'kids', 24.5, 'expense'],
+  ['2026-11-04', 'Shell — Tom’s commute fill-up', 'transport', 42.1, 'expense'],
+  ['2026-11-05', 'Riverside Gym — family membership', 'health', 39.0, 'expense'],
+  ['2026-11-06', 'Paycheck — Maya (Riverbend Clinic)', null, 2075.0, 'income'],
+  ['2026-11-06', 'Paycheck — Tom (Northline Freight)', null, 1800.0, 'income'],
+  ['2026-11-06', 'Pasta night — Trattoria Alba', 'dining', 64.2, 'expense'],
+  ['2026-11-07', 'StreamPlus monthly', 'fun', 15.49, 'expense'],
+  ['2026-11-07', 'GreenMart weekly shop', 'groceries', 96.18, 'expense'],
+  ['2026-11-08', 'Leo’s swim lessons — November', 'kids', 95.0, 'expense'],
+  ['2026-11-09', 'Car insurance — monthly premium', 'transport', 148.0, 'expense'],
+  ['2026-11-10', 'Pharmacy — June’s allergy refill', 'health', 28.4, 'expense'],
+  ['2026-11-10', 'Taco truck Tuesday', 'dining', 31.75, 'expense'],
+  ['2026-11-11', 'GreenMart weekly shop', 'groceries', 154.72, 'expense'],
+  ['2026-11-12', 'City water — quarterly bill', 'utilities', 46.2, 'expense'],
+  ['2026-11-12', 'June’s birthday gift — art set', 'gifts', 45.0, 'expense'],
+  ['2026-11-13', 'Shell — Maya’s fill-up', 'transport', 38.75, 'expense'],
+  ['2026-11-13', 'Friday pizza — delivery', 'dining', 42.9, 'expense'],
+  ['2026-11-14', 'Movie night — four tickets', 'fun', 46.0, 'expense'],
+  ['2026-11-14', 'Hardware store — light bulbs & batteries', 'household', 18.75, 'expense'],
+  ['2026-11-15', 'Fiber internet — monthly', 'utilities', 79.0, 'expense'],
+  ['2026-11-15', 'GreenMart weekly shop', 'groceries', 88.05, 'expense'],
+  ['2026-11-16', 'School book fair — Leo & June', 'kids', 42.3, 'expense'],
+  ['2026-11-17', 'Bus passes — Maya & Tom', 'transport', 96.0, 'expense'],
+  ['2026-11-18', 'Dentist copay — Tom’s check-up', 'health', 85.0, 'expense'],
+  ['2026-11-18', 'GreenMart weekly shop', 'groceries', 121.36, 'expense'],
+  ['2026-11-19', 'Sushi takeaway — date night', 'dining', 58.4, 'expense'],
+  ['2026-11-20', 'Paycheck — Maya (Riverbend Clinic)', null, 2075.0, 'income'],
+  ['2026-11-20', 'Paycheck — Tom (Northline Freight)', null, 1800.0, 'income'],
+  ['2026-11-20', 'Tom’s winter jacket', 'clothing', 89.0, 'expense'],
+  ['2026-11-21', 'Board game — Family Game Night', 'fun', 32.99, 'expense'],
+  ['2026-11-21', 'GreenMart weekly shop', 'groceries', 74.9, 'expense'],
+  ['2026-11-22', 'Leo’s new trainers', 'kids', 68.99, 'expense'],
+  ['2026-11-22', 'Gas — heating, November', 'utilities', 58.3, 'expense'],
+  ['2026-11-23', 'Cleaning supplies & paper goods', 'household', 34.2, 'expense'],
+  ['2026-11-23', 'Rideshare — airport run for Grandma', 'transport', 24.5, 'expense'],
+  ['2026-11-24', 'Breakfast café — Saturday treat', 'dining', 38.6, 'expense'],
+  ['2026-11-24', 'Vitamins & cold medicine', 'health', 18.9, 'expense'],
+  ['2026-11-25', 'GreenMart — Thanksgiving top-up', 'groceries', 58.2, 'expense'],
+  ['2026-11-25', 'New bath towels', 'household', 42.0, 'expense'],
+  ['2026-11-25', 'Flowers for Grandma’s visit', 'gifts', 28.0, 'expense'],
+  ['2026-11-26', 'Shell — pre-Thanksgiving fill-up', 'transport', 45.6, 'expense'],
+  ['2026-11-26', 'Bakery — Thanksgiving pies', 'dining', 52.15, 'expense'],
+  ['2026-11-26', 'MusicStream monthly', 'fun', 9.99, 'expense'],
+];
+// [name, amount, dueDay, paid]
+const BILLS = [
+  ['Rent — Maple Court Apt 4B', 1850.0, 1, true],
+  ['Riverside Gym — family', 39.0, 5, true],
+  ['StreamPlus', 15.49, 7, true],
+  ['Car insurance', 148.0, 9, true],
+  ['City power', 128.4, 12, true],
+  ['Fiber internet', 79.0, 15, true],
+  ['Mobile — two lines', 112.0, 21, true],
+  ['Trash & recycling', 28.0, 25, false],
+  ['Leo’s swim lessons', 95.0, 26, false],
+  ['MusicStream', 9.99, 26, false],
+];
+// [id, name, target, saved, note]
+const GOALS = [
+  ['emergency', 'Emergency fund', 10000, 7350, 'Six months of rent and groceries, for a rainy day.'],
+  ['trip', 'Summer road trip', 2400, 1150, 'Two weeks down the coast, campsites included.'],
+  ['car', 'Next family car', 8000, 2300, 'Replace the 2014 wagon before it gives up.'],
+  ['college', 'College fund — Leo & June', 25000, 4800, 'A little every month, since they were small.'],
+];
+// [month, income, spent] — December 2025 to October 2026; November is live.
+const HISTORY = [
+  ['Dec', 7750, 6210],
+  ['Jan', 7750, 5870],
+  ['Feb', 7750, 6040],
+  ['Mar', 7750, 6590],
+  ['Apr', 7900, 6710],
+  ['May', 7750, 6180],
+  ['Jun', 7750, 5980],
+  ['Jul', 7750, 6410],
+  ['Aug', 7900, 6890],
+  ['Sep', 7750, 6120],
+  ['Oct', 7750, 6340],
+];
+// [id, name, balance, apr (%), monthly minimum] — balances as of 26 Nov 2026.
+const DEBTS = [
+  ['card', 'Credit card — Maple Bank', 2600, 24.9, 75],
+  ['student', 'Student loan — Maya', 1200, 5.8, 60],
+  ['car', 'Car loan — 2014 wagon', 6200, 7.2, 210],
+];
 const HOUSEHOLD = {
   name: 'The Rivera household',
   members: ['Maya', 'Tom', 'Leo (9)', 'June (6)'],
   month: 'November 2026',
   monthKey: '2026-11',
 };
-const CATEGORIES = [
-  { id: 'housing', name: 'Housing', limit: 1850, kind: 'needs', color: '#1e4d3a' },
-  { id: 'groceries', name: 'Groceries', limit: 750, kind: 'needs', color: '#3e7d5b' },
-  { id: 'utilities', name: 'Utilities', limit: 320, kind: 'needs', color: '#6aa88a' },
-  { id: 'transport', name: 'Transport', limit: 520, kind: 'needs', color: '#2f6f8f' },
-  { id: 'kids', name: 'Kids & school', limit: 420, kind: 'needs', color: '#5b8fb0' },
-  { id: 'health', name: 'Health', limit: 260, kind: 'needs', color: '#7ba7bc' },
-  { id: 'dining', name: 'Dining out', limit: 300, kind: 'wants', color: '#d97b29' },
-  { id: 'fun', name: 'Fun & streaming', limit: 200, kind: 'wants', color: '#e8a13c' },
-  { id: 'clothing', name: 'Clothing', limit: 150, kind: 'wants', color: '#c98a5e' },
-  { id: 'household', name: 'Household', limit: 180, kind: 'wants', color: '#a9805a' },
-  { id: 'gifts', name: 'Gifts & giving', limit: 120, kind: 'wants', color: '#b56a6a' },
-  { id: 'savings', name: 'Savings', limit: 1200, kind: 'savings', color: '#8a6fb8' },
-];
-const TRANSACTIONS = [
-  { date: '2026-11-01', description: 'November rent — Maple Court Apt 4B', category: 'housing', amount: 1850.0, type: 'expense' },
-  { date: '2026-11-01', description: 'GreenMart weekly shop', category: 'groceries', amount: 132.4, type: 'expense' },
-  { date: '2026-11-02', description: 'City power — October bill', category: 'utilities', amount: 128.4, type: 'expense' },
-  { date: '2026-11-03', description: 'Transfer to emergency fund', category: 'savings', amount: 1200.0, type: 'expense' },
-  { date: '2026-11-03', description: 'Corner Bakery — school lunch boxes', category: 'kids', amount: 24.5, type: 'expense' },
-  { date: '2026-11-04', description: 'Shell — Tom’s commute fill-up', category: 'transport', amount: 42.1, type: 'expense' },
-  { date: '2026-11-05', description: 'Riverside Gym — family membership', category: 'health', amount: 39.0, type: 'expense' },
-  { date: '2026-11-06', description: 'Paycheck — Maya (Riverbend Clinic)', category: null, amount: 2075.0, type: 'income' },
-  { date: '2026-11-06', description: 'Paycheck — Tom (Northline Freight)', category: null, amount: 1800.0, type: 'income' },
-  { date: '2026-11-06', description: 'Pasta night — Trattoria Alba', category: 'dining', amount: 64.2, type: 'expense' },
-  { date: '2026-11-07', description: 'StreamPlus monthly', category: 'fun', amount: 15.49, type: 'expense' },
-  { date: '2026-11-07', description: 'GreenMart weekly shop', category: 'groceries', amount: 96.18, type: 'expense' },
-  { date: '2026-11-08', description: 'Leo’s swim lessons — November', category: 'kids', amount: 95.0, type: 'expense' },
-  { date: '2026-11-09', description: 'Car insurance — monthly premium', category: 'transport', amount: 148.0, type: 'expense' },
-  { date: '2026-11-10', description: 'Pharmacy — June’s allergy refill', category: 'health', amount: 28.4, type: 'expense' },
-  { date: '2026-11-10', description: 'Taco truck Tuesday', category: 'dining', amount: 31.75, type: 'expense' },
-  { date: '2026-11-11', description: 'GreenMart weekly shop', category: 'groceries', amount: 154.72, type: 'expense' },
-  { date: '2026-11-12', description: 'City water — quarterly bill', category: 'utilities', amount: 46.2, type: 'expense' },
-  { date: '2026-11-12', description: 'June’s birthday gift — art set', category: 'gifts', amount: 45.0, type: 'expense' },
-  { date: '2026-11-13', description: 'Shell — Maya’s fill-up', category: 'transport', amount: 38.75, type: 'expense' },
-  { date: '2026-11-13', description: 'Friday pizza — delivery', category: 'dining', amount: 42.9, type: 'expense' },
-  { date: '2026-11-14', description: 'Movie night — four tickets', category: 'fun', amount: 46.0, type: 'expense' },
-  { date: '2026-11-14', description: 'Hardware store — light bulbs & batteries', category: 'household', amount: 18.75, type: 'expense' },
-  { date: '2026-11-15', description: 'Fiber internet — monthly', category: 'utilities', amount: 79.0, type: 'expense' },
-  { date: '2026-11-15', description: 'GreenMart weekly shop', category: 'groceries', amount: 88.05, type: 'expense' },
-  { date: '2026-11-16', description: 'School book fair — Leo & June', category: 'kids', amount: 42.3, type: 'expense' },
-  { date: '2026-11-17', description: 'Bus passes — Maya & Tom', category: 'transport', amount: 96.0, type: 'expense' },
-  { date: '2026-11-18', description: 'Dentist copay — Tom’s check-up', category: 'health', amount: 85.0, type: 'expense' },
-  { date: '2026-11-18', description: 'GreenMart weekly shop', category: 'groceries', amount: 121.36, type: 'expense' },
-  { date: '2026-11-19', description: 'Sushi takeaway — date night', category: 'dining', amount: 58.4, type: 'expense' },
-  { date: '2026-11-20', description: 'Paycheck — Maya (Riverbend Clinic)', category: null, amount: 2075.0, type: 'income' },
-  { date: '2026-11-20', description: 'Paycheck — Tom (Northline Freight)', category: null, amount: 1800.0, type: 'income' },
-  { date: '2026-11-20', description: 'Tom’s winter jacket', category: 'clothing', amount: 89.0, type: 'expense' },
-  { date: '2026-11-21', description: 'Board game — Family Game Night', category: 'fun', amount: 32.99, type: 'expense' },
-  { date: '2026-11-21', description: 'GreenMart weekly shop', category: 'groceries', amount: 74.9, type: 'expense' },
-  { date: '2026-11-22', description: 'Leo’s new trainers', category: 'kids', amount: 68.99, type: 'expense' },
-  { date: '2026-11-22', description: 'Gas — heating, November', category: 'utilities', amount: 58.3, type: 'expense' },
-  { date: '2026-11-23', description: 'Cleaning supplies & paper goods', category: 'household', amount: 34.2, type: 'expense' },
-  { date: '2026-11-23', description: 'Rideshare — airport run for Grandma', category: 'transport', amount: 24.5, type: 'expense' },
-  { date: '2026-11-24', description: 'Breakfast café — Saturday treat', category: 'dining', amount: 38.6, type: 'expense' },
-  { date: '2026-11-24', description: 'Vitamins & cold medicine', category: 'health', amount: 18.9, type: 'expense' },
-  { date: '2026-11-25', description: 'GreenMart — Thanksgiving top-up', category: 'groceries', amount: 58.2, type: 'expense' },
-  { date: '2026-11-25', description: 'New bath towels', category: 'household', amount: 42.0, type: 'expense' },
-  { date: '2026-11-25', description: 'Flowers for Grandma’s visit', category: 'gifts', amount: 28.0, type: 'expense' },
-  { date: '2026-11-26', description: 'Shell — pre-Thanksgiving fill-up', category: 'transport', amount: 45.6, type: 'expense' },
-  { date: '2026-11-26', description: 'Bakery — Thanksgiving pies', category: 'dining', amount: 52.15, type: 'expense' },
-  { date: '2026-11-26', description: 'MusicStream monthly', category: 'fun', amount: 9.99, type: 'expense' },
-];
-const BILLS = [
-  { name: 'Rent — Maple Court Apt 4B', amount: 1850.0, dueDay: 1, paid: true },
-  { name: 'Riverside Gym — family', amount: 39.0, dueDay: 5, paid: true },
-  { name: 'StreamPlus', amount: 15.49, dueDay: 7, paid: true },
-  { name: 'Car insurance', amount: 148.0, dueDay: 9, paid: true },
-  { name: 'City power', amount: 128.4, dueDay: 12, paid: true },
-  { name: 'Fiber internet', amount: 79.0, dueDay: 15, paid: true },
-  { name: 'Mobile — two lines', amount: 112.0, dueDay: 21, paid: true },
-  { name: 'Trash & recycling', amount: 28.0, dueDay: 25, paid: false },
-  { name: 'Leo’s swim lessons', amount: 95.0, dueDay: 26, paid: false },
-  { name: 'MusicStream', amount: 9.99, dueDay: 26, paid: false },
-];
-const GOALS = [
-  { id: 'emergency', name: 'Emergency fund', target: 10000, saved: 7350, note: 'Six months of rent and groceries, for a rainy day.' },
-  { id: 'trip', name: 'Summer road trip', target: 2400, saved: 1150, note: 'Two weeks down the coast, campsites included.' },
-  { id: 'car', name: 'Next family car', target: 8000, saved: 2300, note: 'Replace the 2014 wagon before it gives up.' },
-  { id: 'college', name: 'College fund — Leo & June', target: 25000, saved: 4800, note: 'A little every month, since they were small.' },
-];
-const HISTORY = [
-  { month: 'Jun', income: 7750, spent: 5980 },
-  { month: 'Jul', income: 7750, spent: 6410 },
-  { month: 'Aug', income: 7900, spent: 6890 },
-  { month: 'Sep', income: 7750, spent: 6120 },
-  { month: 'Oct', income: 7750, spent: 6340 },
-];
-
 
 const STORAGE_KEY = 'hearth-ledger-v1';
 
 function freshSeed() {
   return {
-    categories: CATEGORIES.map((c) => ({ ...c })),
-    transactions: TRANSACTIONS.map((t, i) => ({ ...t, id: `seed-${i + 1}` })),
-    bills: BILLS.map((b) => ({ ...b })),
-    goals: GOALS.map((g) => ({ ...g })),
-    history: HISTORY.map((h) => ({ ...h })),
+    categories: CATEGORIES.map(([id, name, limit, kind, color]) => ({ id, name, limit, kind, color })),
+    transactions: TRANSACTIONS.map(([date, description, category, amount, type], i) => ({
+      id: `seed-${i + 1}`,
+      date,
+      description,
+      category,
+      amount,
+      type,
+    })),
+    bills: BILLS.map(([name, amount, dueDay, paid]) => ({ name, amount, dueDay, paid })),
+    goals: GOALS.map(([id, name, target, saved, note]) => ({ id, name, target, saved, note })),
+    history: HISTORY.map(([month, income, spent]) => ({ month, income, spent })),
+    debts: DEBTS.map(([id, name, balance, apr, minimum]) => ({ id, name, balance, apr, minimum })),
     household: { ...HOUSEHOLD },
     nextId: TRANSACTIONS.length + 1,
   };
@@ -123,8 +150,18 @@ function loadSaved() {
   }
 }
 
+// A saved book from before the debt and twelve-month additions has no debts
+// and a short history; fill those in so the new pages always have data.
+const initialState = loadSaved() ?? freshSeed();
+if (!Array.isArray(initialState.debts)) {
+  initialState.debts = DEBTS.map(([id, name, balance, apr, minimum]) => ({ id, name, balance, apr, minimum }));
+}
+if (!Array.isArray(initialState.history) || initialState.history.length < HISTORY.length) {
+  initialState.history = HISTORY.map(([month, income, spent]) => ({ month, income, spent }));
+}
+
 export const store = {
-  state: loadSaved() ?? freshSeed(),
+  state: initialState,
   memoryOnly: (() => {
     try {
       window.localStorage.setItem('__hearth_probe', '1');
@@ -185,6 +222,86 @@ export const store = {
     const kinds = { needs: 0, wants: 0, savings: 0 };
     for (const c of this.state.categories) kinds[c.kind] += byCategory[c.id] ?? 0;
     return kinds;
+  },
+
+  // What the household can still spend each day and stay inside the budget.
+  safePerDay() {
+    const { spent } = this.totals();
+    const remaining = this.planTotal() - spent;
+    const day = Number(this.asOf().slice(8, 10));
+    const days = daysInMonth(this.state.household.monthKey);
+    const daysLeft = Math.max(0, days - day);
+    return { perDay: daysLeft > 0 ? remaining / daysLeft : remaining, daysLeft, remaining };
+  },
+
+  totalDebt() {
+    const total = this.state.debts.reduce((sum, d) => sum + d.balance, 0);
+    const minimums = this.state.debts.reduce((sum, d) => sum + d.minimum, 0);
+    return { total, minimums };
+  },
+
+  // Simulate paying every debt off: each month interest accrues, every
+  // minimum is paid, and the extra — plus the minimums freed by debts
+  // already cleared — goes to one target. Avalanche picks the highest APR;
+  // snowball picks the smallest balance. Returns the months to clear, the
+  // interest paid, the total paid, and the order the debts clear in.
+  payoff(extra, method) {
+    const ds = this.state.debts.map((d) => ({ ...d, paidAt: 0 }));
+    const initial = ds.reduce((sum, d) => sum + d.balance, 0);
+    const extraPerMonth = Math.max(0, Number(extra) || 0);
+    let months = 0;
+    let interest = 0;
+    while (ds.some((d) => d.balance > 0.005) && months < 600) {
+      months += 1;
+      const freed = ds.filter((d) => d.balance <= 0.005).reduce((sum, d) => sum + d.minimum, 0);
+      for (const d of ds) {
+        if (d.balance > 0.005) {
+          const due = (d.balance * d.apr) / 100 / 12;
+          d.balance += due;
+          interest += due;
+        }
+      }
+      for (const d of ds) {
+        if (d.balance > 0.005) {
+          const pay = Math.min(d.minimum, d.balance);
+          d.balance -= pay;
+          if (d.balance <= 0.005 && !d.paidAt) d.paidAt = months;
+        }
+      }
+      let pool = extraPerMonth + freed;
+      while (pool > 0.005 && ds.some((d) => d.balance > 0.005)) {
+        const active = ds.filter((d) => d.balance > 0.005);
+        const target =
+          method === 'snowball'
+            ? active.reduce((a, b) => (a.balance <= b.balance ? a : b))
+            : active.reduce((a, b) => (a.apr >= b.apr ? a : b));
+        const pay = Math.min(pool, target.balance);
+        target.balance -= pay;
+        pool -= pay;
+        if (target.balance <= 0.005 && !target.paidAt) target.paidAt = months;
+      }
+    }
+    const order = ds
+      .filter((d) => d.paidAt > 0)
+      .sort((a, b) => a.paidAt - b.paidAt)
+      .map((d) => d.name);
+    return { months, interest, paid: initial + interest, order };
+  },
+
+  // Six months ahead, from the twelve-month average: same pay coming in,
+  // the average month's spending, the rest saved, the balance carried on.
+  projection() {
+    const { income, spent } = this.totals();
+    const months = [...this.state.history, { month: 'Nov', income, spent }];
+    const avgIncome = months.reduce((sum, m) => sum + m.income, 0) / months.length;
+    const avgSpent = months.reduce((sum, m) => sum + m.spent, 0) / months.length;
+    const labels = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+    let balance = this.totals().left;
+    return labels.map((label) => {
+      const saved = avgIncome - avgSpent;
+      balance += saved;
+      return { month: label, income: avgIncome, spent: avgSpent, saved, balance };
+    });
   },
 
   addTransaction({ date, description, category, amount, type }) {

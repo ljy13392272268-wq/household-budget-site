@@ -76,7 +76,7 @@ button { font: inherit; cursor: pointer; }
 .board-money strong { display: block; font-family: var(--serif); font-size: 2.55rem; line-height: 1.05; color: #fff; letter-spacing: -0.01em; }
 .board-sub { display: block; font-size: 0.82rem; color: #c6d3c8; margin-top: 0.2em; }
 .board-sub b { color: #f7f2e6; }
-.board-strip { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid rgb(255 255 255 / 0.16); padding: 0.45rem 0 0.5rem; }
+.board-strip { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid rgb(255 255 255 / 0.16); padding: 0.45rem 0 0.5rem; }
 .board-strip > div { padding: 0 0.9rem; border-left: 1px solid rgb(255 255 255 / 0.13); }
 .board-strip > div:first-child { padding-left: 0; border-left: 0; }
 .board-strip .micro { color: #b9c9bd; }
@@ -219,6 +219,15 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .subhead { margin: 0.85rem 0 0.4rem; }
 .insights { margin: 0; padding-left: 1.1rem; font-size: 0.84rem; }
 .insights li { margin-bottom: 0.4em; }
+
+/* Debt payoff and the projection tables */
+
+.debt-controls { align-items: end; }
+.debt-methods { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+.debt-result { font-size: 0.95rem; margin: 0.7rem 0 0.2rem; }
+.debt-result b { color: var(--green); }
+.debts-table td:nth-child(n + 2) { width: 7em; }
+.months-table td:nth-child(n + 2), .proj-table td:nth-child(n + 2) { width: 8em; }
 .planner-inputs { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .plan-row { display: flex; justify-content: space-between; gap: 1.2rem; flex-wrap: wrap; padding: 0.85rem 0; border-top: 1px solid var(--line-soft); }
 .plan-row p { color: var(--muted); margin: 0.2em 0 0; max-width: 52ch; font-size: 0.85rem; }

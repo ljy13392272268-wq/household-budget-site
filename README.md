@@ -4,7 +4,7 @@
 [![rank](https://make.fun/badge/best-household-budget-site-20261126-1457/ljy13392272268-wq/household-budget-site/rank.svg)](https://make.fun/bounty/best-household-budget-site-20261126-1457/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-household-budget-site-20261126-1457)
 [![reward](https://make.fun/badge/best-household-budget-site-20261126-1457/ljy13392272268-wq/household-budget-site/reward.svg)](https://make.fun/bounty/best-household-budget-site-20261126-1457?utm_source=github&utm_medium=readme&utm_campaign=best-household-budget-site-20261126-1457)
 
-Hearth Ledger — a household budget site that runs offline in a web browser, on a desktop and on a phone, from its own static files. A dashboard for the month at a glance, a budget page with per-category limits, a transactions ledger you can add to, bills and savings goals, monthly reports with charts, and a 50/30/20 planner. Built by an AI agent for make.fun's “Make the best household budget site” bounty, $50 in USDC.
+Hearth Ledger — a household budget site that runs offline in a web browser, on a desktop and on a phone, from its own static files. A dashboard for the month at a glance, a budget page with per-category limits, a transactions ledger you can add to, bills and savings goals, monthly reports with charts, and a 50/30/20 planner. Twelve months of history, a debt payoff lab with avalanche and snowball simulation, a safe-to-spend figure for each day left in the month, and a six-month cash-flow projection. Built by an AI agent for make.fun's “Make the best household budget site” bounty, $50 in USDC.
 
 ## Run it
 

@@ -1,39 +1,49 @@
 // Hearth Ledger — the router and the wiring: one hash route per page, the
-// charts drawn, and the buttons and forms connected.
+// donut drawn on the reports page, and the buttons and forms connected.
+// The dashboard view loads with the first load; the other pages and the
+// donut code load on demand, so the first load stays small.
 
-import { drawCashFlow, drawDonut } from './charts.js';
-import { money, store } from './store.js';
-import {
-  billsGoalsView,
-  budgetView,
-  dashboardView,
-  ledgerRows,
-  missingView,
-  plannerView,
-  reportsView,
-  transactionsView,
-} from './views.js';
+import { escapeHtml, money, store } from './store.js';
+import { dashboardView } from './views-core.js';
 
 const app = document.getElementById('app');
 const navLinks = [...document.querySelectorAll('.site-nav a')];
 
 const ROUTES = {
-  '/': { view: dashboardView, title: 'Hearth Ledger — a household budget that adds up' },
-  '/budget': { view: budgetView, title: 'The November budget | Hearth Ledger' },
-  '/transactions': { view: transactionsView, title: 'The ledger | Hearth Ledger' },
-  '/bills': { view: billsGoalsView, title: 'Bills & savings goals | Hearth Ledger' },
-  '/reports': { view: reportsView, title: 'Reports | Hearth Ledger' },
-  '/plan': { view: plannerView, title: 'The 50/30/20 planner | Hearth Ledger' },
+  '/': { view: 'dashboard', title: 'Hearth Ledger — a household budget that adds up' },
+  '/budget': { view: 'budgetView', title: 'The November budget | Hearth Ledger' },
+  '/transactions': { view: 'transactionsView', title: 'The ledger | Hearth Ledger' },
+  '/bills': { view: 'billsGoalsView', title: 'Bills & savings goals | Hearth Ledger' },
+  '/reports': { view: 'reportsView', title: 'Reports | Hearth Ledger' },
+  '/plan': { view: 'plannerView', title: 'The 50/30/20 planner | Hearth Ledger' },
 };
 
-function drawCharts() {
-  const cashflow = document.getElementById('cashflow-chart');
-  if (cashflow) {
-    const { income, spent } = store.totals();
-    drawCashFlow(cashflow, [...store.state.history, { month: 'Nov', income, spent }]);
+let pagesModule = null;
+async function pages() {
+  if (!pagesModule) pagesModule = await import('./views-pages.js');
+  return pagesModule;
+}
+
+let debtMethod = 'avalanche';
+
+function updateDebt() {
+  const input = document.getElementById('debt-extra');
+  const result = document.getElementById('debt-result');
+  if (!input || !result) return;
+  const extra = Math.max(0, Number(input.value) || 0);
+  const r = store.payoff(extra, debtMethod);
+  result.innerHTML =
+    `Debt-free in <b>${r.months} months</b> &middot; ${money(r.interest)} interest &middot; ${money(r.paid)} paid in all.` +
+    `<br><span class="hint">Clears in this order: ${r.order.map((name) => escapeHtml(name)).join(' &rarr; ')}</span>`;
+  for (const button of document.querySelectorAll('[data-action="debt-method"]')) {
+    button.classList.toggle('button-ghost', button.dataset.method !== debtMethod);
   }
+}
+
+async function drawCharts() {
   const donut = document.getElementById('donut-chart');
   if (donut) {
+    const { drawDonut } = await import('./charts.js');
     const byCategory = store.spentByCategory();
     const slices = store.state.categories
       .filter((c) => c.id !== 'housing' && c.kind !== 'savings' && byCategory[c.id] > 0)
@@ -43,12 +53,13 @@ function drawCharts() {
   }
 }
 
-function refreshLedgerList() {
+async function refreshLedgerList() {
   const category = document.getElementById('filter-category');
   const search = document.getElementById('filter-search');
   const body = document.getElementById('ledger-body');
   const count = document.getElementById('ledger-count');
   if (!category || !search || !body || !count) return;
+  const { ledgerRows } = await pages();
   const { html, count: n } = ledgerRows(category.value, search.value);
   body.innerHTML = html;
   count.textContent = `${n} ${n === 1 ? 'entry' : 'entries'}`;
@@ -140,6 +151,12 @@ function wirePage() {
     const el = document.getElementById(input);
     if (el) el.addEventListener('input', recalcPlan);
   }
+
+  const debtExtra = document.getElementById('debt-extra');
+  if (debtExtra) {
+    debtExtra.addEventListener('input', updateDebt);
+    updateDebt();
+  }
 }
 
 document.addEventListener('click', (event) => {
@@ -161,25 +178,40 @@ document.addEventListener('click', (event) => {
   } else if (action === 'contribute') {
     store.contribute(target.dataset.id, Number(target.dataset.amount));
     render();
+  } else if (action === 'debt-method') {
+    debtMethod = target.dataset.method === 'snowball' ? 'snowball' : 'avalanche';
+    updateDebt();
   } else if (action === 'reset-data') {
     store.reset();
     render();
   }
 });
 
-function render() {
+async function render() {
   window.__shotReady = false;
   const path = location.hash.replace(/^#/, '') || '/';
-  const route = ROUTES[path] ?? { view: missingView, title: 'Not found | Hearth Ledger' };
-  document.title = route.title;
-  app.innerHTML = route.view();
+  const route = ROUTES[path];
+  let view;
+  let title;
+  if (!route) {
+    view = (await pages()).missingView;
+    title = 'Not found | Hearth Ledger';
+  } else if (route.view === 'dashboard') {
+    view = dashboardView;
+    title = route.title;
+  } else {
+    view = (await pages())[route.view];
+    title = route.title;
+  }
+  document.title = title;
+  app.innerHTML = view();
   for (const link of navLinks) {
     const href = link.getAttribute('href') ?? '';
     link.classList.toggle('active', href === `#${path}` || (path === '/' && href === '#/'));
     if (link.classList.contains('active')) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  drawCharts();
+  await drawCharts();
   wirePage();
   window.scrollTo(0, 0);
   window.__shotReady = true;

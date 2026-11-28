@@ -1,3 +1,82 @@
+# Round 3 — twelve months, a debt lab, and a smaller first load
+
+Baseline: commit `19e6ce9` (round 2). The blind rounds put this entry at 197th of
+4,675 in round 1 and 1,576th of 5,723 in round 2, same score, and the sample of
+entries ranked 51–100 in round 2 showed where the gap is: more months of history,
+a debt tool, a forward view, a "safe to spend" figure, and a smaller first load.
+This round closes all five, against the same five criteria in order.
+
+## What changed
+
+**Twelve months of history** (criteria 1, 2). The cash-flow record ran June to
+November; it now runs December 2025 to November 2026, eleven past months plus the
+live November, and the reports page has the twelve months as a table (income,
+spent, left). November is still the lowest month, and the reports insight now
+says so against the twelve-month average instead of against a single month.
+
+**A debt payoff lab** (criteria 2, 3). Three balances as of 26 November 2026 —
+credit card $2,600 at 24.9%, student loan $1,200 at 5.8%, car loan $6,200 at 7.2%,
+$10,000 in all — with a simulator on the Bills &amp; Goals page: an extra amount
+each month and two methods, avalanche (highest APR first) and snowball (smallest
+balance first). Minimums are paid first, freed minimums roll into the next debt,
+and the result gives the months to clear, the interest, the total paid, and the
+order the debts clear in. With $100 extra a month the avalanche clears in 26
+months for $1,186.96 of interest; the snowball takes the same 26 months but
+$1,346.79. The dashboard carries the headline: debt $10,000, clear in 26 months.
+
+**A safe-to-spend figure** (criteria 2, 3). The dashboard strip's fourth cell is
+now the answer to "what can I spend today": $183.96 a day, from the $735.83 still
+unspent in the budget over the 4 days left in November. It is computed from the
+book, so it moves when a transaction is added.
+
+**Six months ahead** (criterion 2). The planner page has a projection for
+December 2026 to May 2027, from the twelve-month average: $7,775 a month coming
+in, $6,239.51 going out, $1,535.49 saved, the balance carried on to $11,428.74
+by May. Chart and table, both computed, not typed.
+
+**A smaller first load** (criterion 5). The pages other than the dashboard now
+load on demand: `views.js` is split into `views-core.js` (the shared pieces and
+the dashboard) and `views-pages.js`, which the router fetches the first time
+another page is opened; the donut code in `charts.js` loads the same way, only
+on the reports page. The bar charts are inline SVG in the views, so no chart
+library is needed on first load. The seed data is compact rows mapped to objects
+once, which pays for the new history months and debts. Two round-1 "tried and
+dropped" items come back, and the reason they do is that the data is no longer
+fixed this round and the split is real: the browser genuinely fetches less on
+the dashboard, not just a different accounting of the same bytes.
+
+## Results
+
+| | round 2 | round 3 |
+| --- | --- | --- |
+| first load, gzip-9 | 6 files, 17,879 B | **5 files, 16,202 B** |
+| whole app | 7 files, 62,543 B | 8 files, 71,145 B |
+| dossier text | 63,363 B | 72,090 B (cap 163,840) |
+| dossier.json | 708,452 B | 590,541 B |
+
+- `MAKEFUN_OUTPUT_DIR=out node main.ts` → exit 0 both runs, byte-identical:
+  `sha256 f5562f008793cfb2ca5307669766bbabf02e00eb7a6b416304843e4850fc7986`.
+- `URLs in the source: 0`. No script, style, font, image or frame comes from anywhere
+  but `app/`.
+- Playwright checks pass in a fresh Chrome against the real site: all six pages
+  load with zero console errors and zero failed requests, the debt simulator
+  recomputes on input and on method change (avalanche $100 extra: 26 months,
+  $1,186.96 interest; $200 extra: 20 months, $863.50; snowball $200 extra:
+  21 months, $1,004.57), and the screenshots are clean at 1280×800 and 390×844.
+- Screenshots: four JPEGs, 118,416 / 104,857 / 109,233 / 54,132 bytes; 1280×800 three
+  times and 390×844 once.
+- The book is untouched: 7,750.00 in, 5,534.17 out, 2,215.83 left, 1,200.00 saved
+  (15.5%), plan 6,270.00, unpaid 132.99, 47 entries.
+
+## Tried and dropped
+
+- **A separate monthly table on the dashboard.** The twelve months already show
+  in the cash-flow chart; a second table would push the cover past the 800px
+  fold. The table lives on the reports page instead.
+- **Reaching the 5.3 KiB first load the fastest entries claim.** That would need
+  the ledger data itself rewritten, not just the code around it, and the book is
+  frozen. The split gets the first load to 16.2 KiB with three new features in it.
+
 # Round 2 — the cover reads at a glance, and the reports add up
 
 Baseline: commit `54934ea` (round 1). Judged against the five criteria in order:
